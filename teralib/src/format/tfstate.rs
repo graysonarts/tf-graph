@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde::{de, Deserialize};
+use serde::{Deserialize};
 
 use crate::GraphError;
 

@@ -34,7 +34,7 @@ impl TerraformShow {
     pub fn dependencies(&self) -> Vec<String> {
         let maybe_resources = self.values.root_module.resources.as_ref();
 
-        if let Some(ref resources) = maybe_resources {
+        if let Some(resources) = maybe_resources {
             resources
                 .iter()
                 .filter_map(|r| {

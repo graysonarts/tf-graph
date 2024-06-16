@@ -1,7 +1,7 @@
 mod format;
 mod node;
 
-use cwd_block::{with_cwd, WithWorkingDirectory};
+use cwd_block::{with_cwd};
 use format::tfstate::TerraformState;
 
 use self::node::*;
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_graph_builder() {
-        let graph = TFGraph::default()
+        let _graph = TFGraph::default()
             .with_root("../test_infrastructure/child")
             .with_root("../test_infrastructure/parent")
             .with_root("../test_infrastructure/cycle")
