@@ -40,7 +40,7 @@ impl Node {
 }
 
 #[derive(Debug)]
-pub(crate) struct NodeHeader {
+pub struct NodeHeader {
     pub id: NodeId,
     pub path: PathBuf,
 }
@@ -56,7 +56,7 @@ impl NodeHeader {
 }
 
 #[derive(Debug, Builder, Clone)]
-pub(crate) struct NodeFull {
+pub struct NodeFull {
     pub id: NodeId,
     pub path: PathBuf,
     pub node: String,
