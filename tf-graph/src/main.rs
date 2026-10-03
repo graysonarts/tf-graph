@@ -8,6 +8,9 @@ mod graphviz;
 
 #[derive(Parser, Debug)]
 struct Arguments {
+    #[clap(short, long, default_value = "false")]
+    debug: bool,
+
     #[clap(default_value = "./")]
     root_dir: PathBuf,
 }
@@ -15,6 +18,9 @@ struct Arguments {
 fn main() -> Result<()> {
     color_eyre::install()?;
     let args = Arguments::parse();
+    if args.debug {
+        tracing_subscriber::fmt::init();
+    }
 
     let mut types = ignore::types::TypesBuilder::new();
     // types.add_defaults();

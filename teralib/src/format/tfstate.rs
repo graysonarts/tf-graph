@@ -5,14 +5,25 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde::{Deserialize};
+use serde::Deserialize;
 
 use crate::GraphError;
 
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
 pub(crate) enum TerraformState {
     Remote(TerraformRemoteState),
+    Local(TerraformLocalState),
+}
+
+impl From<TerraformRemoteStateJson> for TerraformState {
+    fn from(json: TerraformRemoteStateJson) -> Self {
+        TerraformState::Remote(json.into())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum TerraformStateJson {
+    Remote(TerraformRemoteStateJson),
     Local(TerraformLocalState),
 }
 
@@ -42,15 +53,41 @@ impl From<PathBuf> for TerraformLocalState {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct TerraformRemoteStateJson {
+    pub version: i32,
+    pub backend: TerraformBackendJson,
+}
+
 pub(crate) struct TerraformRemoteState {
     pub version: i32,
     pub backend: TerraformBackend,
 }
 
+impl From<TerraformRemoteStateJson> for TerraformRemoteState {
+    fn from(json: TerraformRemoteStateJson) -> Self {
+        TerraformRemoteState {
+            version: json.version,
+            backend: json.backend.into(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "config", rename_all = "lowercase")]
+pub(crate) enum TerraformBackendJson {
+    S3(S3BackendConfigJson),
+}
+
 pub(crate) enum TerraformBackend {
     S3(S3BackendConfig),
+}
+
+impl From<TerraformBackendJson> for TerraformBackend {
+    fn from(json: TerraformBackendJson) -> Self {
+        match json {
+            TerraformBackendJson::S3(config) => TerraformBackend::S3(config.into()),
+        }
+    }
 }
 
 impl Display for TerraformBackend {
@@ -61,11 +98,36 @@ impl Display for TerraformBackend {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
+pub(crate) struct S3BackendConfigJson {
+    pub bucket: String,
+    pub region: String,
+    pub key: String,
+}
+
+#[derive(Debug)]
 pub(crate) struct S3BackendConfig {
     pub bucket: String,
     pub region: String,
     pub key: String,
+    pub environment: Option<String>,
+}
+
+impl From<S3BackendConfigJson> for S3BackendConfig {
+    fn from(json: S3BackendConfigJson) -> Self {
+        let (environment, key) = if json.key.contains("/") {
+            let parts: Vec<_> = json.key.splitn(2, '/').collect();
+            (Some(parts[0].to_string()), parts[1])
+        } else {
+            (None, json.key.as_str())
+        };
+        S3BackendConfig {
+            bucket: json.bucket,
+            region: json.region,
+            key: key.to_string(),
+            environment: environment,
+        }
+    }
 }
 
 impl Display for S3BackendConfig {
@@ -82,8 +144,8 @@ impl TerraformState {
         if remote_path.exists() {
             let file = File::open(remote_path)?;
             let reader = BufReader::new(file);
-            let state: TerraformRemoteState = serde_json::from_reader(reader)?;
-            Ok(TerraformState::Remote(state))
+            let state: TerraformRemoteStateJson = serde_json::from_reader(reader)?;
+            Ok(TerraformState::Remote(state.into()))
         } else if local_path.exists() {
             Ok(TerraformState::Local(local_path.canonicalize()?.into()))
         } else {

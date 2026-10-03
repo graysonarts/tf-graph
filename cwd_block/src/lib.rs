@@ -25,7 +25,6 @@ impl Drop for WithWorkingDirectory {
 
 pub fn with_cwd<R>(new_cwd: impl AsRef<Path>, f: impl FnOnce() -> R) -> R {
     let cwd = WithWorkingDirectory::new(new_cwd);
-    tracing::info!("Running Command");
     let res = f();
     drop(cwd);
 

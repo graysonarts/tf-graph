@@ -5,6 +5,11 @@ pub(crate) fn output_graphviz(graph: &TFGraph) -> String {
     output.push_str("digraph G {\n");
 
     for (id, node) in graph.roots.iter() {
+        tracing::debug!("Node: {:#?}", node);
+        // let environment = match node.environment() {
+        //     Some(env) => format!(" ({})", env),
+        //     None => String::new(),
+        // };
         output.push_str(&format!("  {} [label=\"{}\"];\n", id, node.name(),));
     }
 

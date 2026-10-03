@@ -3,7 +3,7 @@ use std::{fmt::Display, path::PathBuf};
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::tfstate::S3BackendConfig;
+use super::tfstate::{S3BackendConfig, S3BackendConfigJson};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct TerraformShow {
@@ -42,9 +42,11 @@ impl TerraformShow {
                         return None;
                     }
 
-                    let backend: TerraformShowBackend = serde_json::from_value(r.values.clone())
-                        .expect("Unable to deserialize backend");
-
+                    let backend: TerraformShowBackendJson =
+                        serde_json::from_value(r.values.clone())
+                            .expect("Unable to deserialize backend");
+                    let backend: TerraformShowBackend = backend.into();
+                    tracing::debug!("Backend: {:#?}", backend);
                     Some(format!("{}", backend))
                 })
                 .collect()
@@ -56,15 +58,32 @@ impl TerraformShow {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "backend", content = "config", rename_all = "lowercase")]
+pub(crate) enum TerraformShowBackendJson {
+    S3(S3BackendConfigJson),
+    Local(LocalConfig),
+}
+
+#[derive(Debug)]
 pub(crate) enum TerraformShowBackend {
     S3(S3BackendConfig),
     Local(LocalConfig),
 }
 
+impl From<TerraformShowBackendJson> for TerraformShowBackend {
+    fn from(json: TerraformShowBackendJson) -> Self {
+        match json {
+            TerraformShowBackendJson::S3(config) => TerraformShowBackend::S3(config.into()),
+            TerraformShowBackendJson::Local(config) => TerraformShowBackend::Local(config),
+        }
+    }
+}
+
 impl Display for TerraformShowBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TerraformShowBackend::S3(config) => write!(f, "{}", config),
+            TerraformShowBackend::S3(config) => {
+                write!(f, "{}", config)
+            }
             TerraformShowBackend::Local(config) => write!(f, "{}", config),
         }
     }

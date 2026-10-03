@@ -37,6 +37,17 @@ impl Node {
             Node::Processed(full) => &full.node,
         }
     }
+
+    pub fn environment(&self) -> Option<&str> {
+        match self {
+            Node::Unprocessed(_) => None,
+            Node::Processed(full) => full
+                .path
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map(|f| f.split('.').next().unwrap()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -51,6 +62,16 @@ impl NodeHeader {
             id: self.id,
             path: self.path,
             node: name.to_string(),
+            environment: None,
+        }
+    }
+}
+
+impl NodeFull {
+    pub fn with_environment(self, environment: &str) -> NodeFull {
+        NodeFull {
+            environment: Some(environment.to_string()),
+            ..self
         }
     }
 }
@@ -60,4 +81,5 @@ pub struct NodeFull {
     pub id: NodeId,
     pub path: PathBuf,
     pub node: String,
+    pub environment: Option<String>,
 }

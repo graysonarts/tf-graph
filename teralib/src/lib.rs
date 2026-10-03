@@ -1,11 +1,15 @@
 mod format;
 mod node;
 
-use cwd_block::{with_cwd};
+use cwd_block::with_cwd;
 use format::tfstate::TerraformState;
 
 use self::node::*;
-use std::{collections::HashMap, path::Path, process::Command};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    process::Command,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GraphError {
@@ -30,7 +34,7 @@ pub enum GraphError {
 pub struct TFGraph {
     pub roots: HashMap<NodeId, Node>,
     pub backends: HashMap<String, NodeId>,
-    pub dependency_list: HashMap<NodeId, Vec<NodeId>>,
+    pub dependency_list: HashMap<NodeId, HashSet<NodeId>>,
 }
 
 impl TFGraph {
@@ -57,17 +61,20 @@ impl TFGraph {
                 let json = run_terraform_json(".")?;
                 let results: format::show_output::TerraformShow =
                     serde_json::from_str(&json).expect("Unable to deserialize show");
+
                 let dependencies = results.dependencies();
                 let dependencies: Vec<_> = dependencies
                     .iter()
                     .map(|d| {
                         tracing::info!("Looking for backend {:?}", d);
+                        tracing::debug!("Backends\n{:#?}\n", self.backends);
                         let id = self.backends.get(d).expect("Unable to find backend");
                         *id
                     })
                     .collect();
                 tracing::info!("{:?}\n{:#?}", node, dependencies);
-                self.dependency_list.insert(*id, dependencies);
+                self.dependency_list
+                    .insert(*id, dependencies.into_iter().collect());
                 Ok(())
             })?;
         }
